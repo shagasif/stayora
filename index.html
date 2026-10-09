@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stayora: find a stay you'll love</title>
+<meta name="description" content="Search hotels, compare rooms, and book with clear prices.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#app">Skip to content</a>
+<header class="nav"><div class="wrap navin">
+  <a class="logo" href="#/" aria-label="Stayora home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="13" fill="#d4af37"/><path d="M5 17h16M8 17v-5a5 5 0 0110 0v5" stroke="#14262e" stroke-width="2" fill="none" stroke-linecap="round"/></svg>Stayora</a>
+  <div class="navr"><nav aria-label="Main"><a href="#/">Stays</a><a href="#/lookup">Find my booking</a></nav><div class="auth" id="auth"></div></div>
+</div></header>
+<main id="app" tabindex="-1"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<footer class="main-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <section class="footer-col footer-brand" aria-labelledby="ft-brand">
+        <h3 id="ft-brand">Stayora Pakistan</h3>
+        <p>Discover luxury stays, premium corporate suites, and breathtaking resort experiences across Pakistan's most pristine destinations.</p>
+        <ul class="footer-social" aria-label="Social media">
+          <li><a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Stayora on Facebook (opens in a new tab)">Facebook</a></li>
+          <li><a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Stayora on Instagram (opens in a new tab)">Instagram</a></li>
+          <li><a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" aria-label="Stayora on LinkedIn (opens in a new tab)">LinkedIn</a></li>
+        </ul>
+      </section>
+      <nav class="footer-col" aria-labelledby="ft-dest">
+        <h3 id="ft-dest">Popular Destinations</h3>
+        <ul class="footer-links">
+          <li><a href="#/" data-dest="Islamabad">Islamabad</a></li>
+          <li><a href="#/" data-dest="Lahore">Lahore</a></li>
+          <li><a href="#/" data-dest="Karachi">Karachi</a></li>
+          <li><a href="#/" data-dest="Hunza">Hunza Valley</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-col" aria-labelledby="ft-help">
+        <h3 id="ft-help">Help &amp; Support</h3>
+        <ul class="footer-links">
+          <li><a href="mailto:support@stayora.pk?subject=Stayora%20support">Contact Us</a></li>
+          <li><a href="#/faqs">FAQs</a></li>
+          <li><a href="#/privacy">Privacy Policy</a></li>
+          <li><a href="#/terms">Terms of Service</a></li>
+        </ul>
+        <p class="footer-contact">Email us at <a href="mailto:support@stayora.pk">support@stayora.pk</a></p>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Stayora Pakistan. All rights reserved.</p>
+      <ul class="pay-list" aria-label="Payment methods">
+        <li>Visa</li>
+        <li>Mastercard</li>
+        <li>JazzCash</li>
+        <li>Easypaisa</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+    /* destination links search from 2 weeks ahead for 3 nights, 2 guests (same defaults as the home page) */
+    (function () {
+      var day = function (n) { var t = new Date(); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+      document.querySelectorAll('.main-footer [data-dest]').forEach(function (a) {
+        a.href = '#/results?dest=' + encodeURIComponent(a.dataset.dest) + '&in=' + day(14) + '&out=' + day(17) + '&g=2&c=0&r=1&p=0';
+      });
+    })();
+  </script>
+</footer>
+</body>
+</html>
