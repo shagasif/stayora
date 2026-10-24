@@ -1,2 +1,2 @@
 // Paste your Supabase project values here (anon key is public by design; security comes from RLS).
-window.STAYORA_CONFIG = { SUPABASE_URL: "https://glpureemlpvfolrjulur.supabase.co", SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdscHVyZWVtbHB2Zm9scmp1bHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MzkxNDUsImV4cCI6MjEwNzExNTE0NX0.W6Kellek0VcbZqps43xONheWsnJP33S7TQC7hHB52bw" };
+window.STAYORA_CONFIG = { SUPABASE_URL: "", SUPABASE_ANON_KEY: "" };

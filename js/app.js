@@ -4,7 +4,18 @@ const sb = C.SUPABASE_URL && C.SUPABASE_ANON_KEY && window.supabase ? window.sup
 
 /* ---------- helpers ---------- */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0}).format(n);
+/* Prices are stored in USD. They are shown in the currency of the hotel's country, converted at the SAMPLE rates below
+   (units per 1 USD). These are approximate demo values: update them (or load live rates) before going live. */
+const CURRENCY = {
+  'Pakistan':{code:'PKR', rate:280},  'United Arab Emirates':{code:'AED', rate:3.6725}, 'Turkey':{code:'TRY', rate:42},
+  'Japan':{code:'JPY', rate:150},     'Switzerland':{code:'CHF', rate:0.8},             'Indonesia':{code:'IDR', rate:16500},
+  'Portugal':{code:'EUR', rate:0.92}
+};
+const cur = country => CURRENCY[country] || {code:'USD', rate:1};
+/* money(usdAmount, country, plainCode): plainCode uses "PKR 14,000" style (safe for the PDF, which has no symbol fonts) */
+const money = (n, country, plainCode) => { const c = cur(country); return new Intl.NumberFormat('en-US', {style:'currency', currency:c.code, currencyDisplay:plainCode ? 'code' : 'symbol', maximumFractionDigits:0}).format(n * c.rate); };
+/* Saved bookings only hold the city, so look the country up from the built-in city list */
+const cityCountry = city => { const h = (typeof DEMO !== 'undefined' ? DEMO : []).find(x => x.city === city); return h ? h.country : ''; };
 const iso = d => d.toISOString().slice(0, 10);
 const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
 const nights = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
@@ -171,7 +182,7 @@ const PH = {
   bath:   ['1646974400439-8472d58bb19e', 'Bathroom'],
   /* Pakistan places: freely licensed photos from Wikimedia Commons (credited in the page footer) */
   lahore: ['wm:Badshahi_Mosque_Lhr.jpg', 'Badshahi Mosque, Lahore', true],
-  isb:    ['wm:Courtyard_in_the_morning.jpg', 'Faisal Mosque, Islamabad', true],
+  isb:    ['file:images/faisal-mosque.jpg', 'Faisal Mosque, Islamabad', true],
   hunza:  ['wm:Hunza_Valley,_view_from_Eagle%27s_Nest.jpg', 'Hunza Valley', true],
   /* Pakistan photos supplied by the site owner (images/ folder), one per place */
   myKarachi:   ['file:images/karachi.jpg', 'Hotel exterior', true],
@@ -362,7 +373,7 @@ const card = (h, q, shifted) => {
   <div class="row">${stars(h.stars)}<span class="muted">${esc(h.city)}, ${esc(h.country)}</span></div>
   <h3>${esc(h.name)}</h3><p class="muted">${esc(h.amenities.slice(0, 3).join(', '))}</p>
   ${shifted ? `<p class="shifted">Best price: ${fmtS(q.in)} to ${fmtS(q.out)}</p>` : ''}
-  <p class="price"><span class="muted">From</span> <strong>${money(p)}</strong> <span class="muted">per night</span><br><span class="muted">${money(p * n * R)} for ${plural(n, 'night', 'nights')}${R > 1 ? ', ' + plural(R, 'room', 'rooms') : ''}</span></p></div></a>`;
+  <p class="price"><span class="muted">From</span> <strong>${money(p, h.country)}</strong> <span class="muted">per night</span><br><span class="muted">${money(p * n * R, h.country)} for ${plural(n, 'night', 'nights')}${R > 1 ? ', ' + plural(R, 'room', 'rooms') : ''}</span></p></div></a>`;
 };
 
 /* ---------- views ---------- */
@@ -446,7 +457,7 @@ async function hotel(q, id) {
     <div class="trip"><span><strong>${bad ? '' : fmt(v.in) + ' to ' + fmt(v.out)}</strong></span><span>${bad ? esc(bad) : plural(n, 'night', 'nights') + ', ' + esc(partyText(P)) + (P.p ? ', with pets' : '')}</span><button type="button" class="linkbtn" id="chg">Change dates or guests</button></div>
     <h2>Choose your room</h2>
     ${rooms.length ? rooms.map(r => { const K = r.need || R; return `<div class="room"><div><h3>${esc(r.name)}</h3><span class="muted">Sleeps up to ${r.max}${K > 1 ? ' per room' : ''}</span>${K > R ? `<br><span class="muted">Your group of ${v.g} needs ${K} of these rooms</span>` : ''}${r.left <= 2 ? `<br><span class="low">Only ${r.left} left for your dates</span>` : ''}</div>
-      <div class="rp"><strong>${money(r.price * n * K)}</strong><br><span class="muted">${money(r.price)} per night${K > 1 ? ', ' + plural(K, 'room', 'rooms') : ''}, ${plural(n, 'night', 'nights')}</span></div>
+      <div class="rp"><strong>${money(r.price * n * K, h.country)}</strong><br><span class="muted">${money(r.price, h.country)} per night${K > 1 ? ', ' + plural(K, 'room', 'rooms') : ''}, ${plural(n, 'night', 'nights')}</span></div>
       <a class="btn" href="#/book?${qs({room:r.id, hotel:id, ...tq(v), r:K})}">Reserve</a></div>`; }).join('') : '<div class="state"><p>No rooms are available for these dates and guests. Try different dates.</p></div>'}</div>`);
     bindGallery(h);
     document.getElementById('chg').onclick = () => openTrip(bad ? dq() : v, id);
@@ -470,7 +481,7 @@ async function book(q) {
       <p class="err" id="be" role="alert"></p><button class="btn" style="width:100%">Confirm booking</button></form>
     <aside class="sum" aria-label="Booking summary"><div class="img">${hero(h)}</div><div class="in"><h3>${esc(h.name)}</h3><p class="muted">${esc(h.city)}, ${esc(h.country)}</p><dl>
       <div><dt>Room</dt><dd>${esc(r.name)}</dd></div><div><dt>Check-in</dt><dd>${fmt(v.in)}</dd></div><div><dt>Check-out</dt><dd>${fmt(v.out)}</dd></div>
-      <div><dt>Guests</dt><dd>${esc(guestLine(v.g - v.c, v.c))}</dd></div><div><dt>Rooms</dt><dd>${v.r}</dd></div>${v.p ? '<div><dt>Pets</dt><dd>Traveling with pets</dd></div>' : ''}<div><dt>Nights</dt><dd>${n}</dd></div><div class="total"><dt>Total</dt><dd>${money(total)}</dd></div></dl></div></aside></div></div>`);
+      <div><dt>Guests</dt><dd>${esc(guestLine(v.g - v.c, v.c))}</dd></div><div><dt>Rooms</dt><dd>${v.r}</dd></div>${v.p ? '<div><dt>Pets</dt><dd>Traveling with pets</dd></div>' : ''}<div><dt>Nights</dt><dd>${n}</dd></div><div class="total"><dt>Total</dt><dd>${money(total, h.country)}</dd></div></dl></div></aside></div></div>`);
     const f = document.getElementById('bf'), be = document.getElementById('be');
     f.onsubmit = async e => {
       e.preventDefault();
@@ -504,7 +515,7 @@ function bookingPdf(b) {
   const pdfText = s => String(s ?? '').replace(/[^\x20-\xff]/g, '?').replace(/[\\()]/g, '\\$&').replace(/[\x80-\xff]/g, c => '\\' + c.charCodeAt(0).toString(8).padStart(3, '0'));
   const rows = [['Reference', b.reference], ['Status', String(b.status).charAt(0).toUpperCase() + String(b.status).slice(1)], ['Hotel', `${b.hotel_name}, ${b.city}`], ['Room', b.room_name],
     ['Check-in', fmt(b.check_in)], ['Check-out', fmt(b.check_out)], ['Nights', String(nights(b.check_in, b.check_out))], ['Guests', guestLine(b.guest_count - (b.children || 0), b.children || 0)], ['Rooms', String(b.rooms || 1)], ...(b.pets ? [['Pets', 'Traveling with pets']] : []),
-    ['Booked by', `${b.full_name} (${b.email})`], ['Total', money(b.total_price)]];
+    ['Booked by', `${b.full_name} (${b.email})`], ['Total', money(b.total_price, cityCountry(b.city), true)]];
   let c = '0.078 0.149 0.18 rg 0 750 595 92 re f\nBT /F2 26 Tf 1 1 1 rg 50 790 Td (Stayora) Tj ET\nBT /F1 12 Tf 0.85 0.9 0.92 rg 50 768 Td (Booking confirmation) Tj ET\n';
   rows.forEach((r, i) => { const y = 700 - i * 34; c += `0.89 0.86 0.84 RG 50 ${y - 10} m 545 ${y - 10} l S\nBT /F1 11 Tf 0.37 0.45 0.48 rg 50 ${y} Td (${pdfText(r[0])}) Tj ET\nBT /F2 12 Tf 0.102 0.102 0.102 rg 190 ${y} Td (${pdfText(r[1])}) Tj ET\n`; });
   c += `BT /F1 11 Tf 0.37 0.45 0.48 rg 50 ${700 - rows.length * 34 - 10} Td (Payment is made at the property. Keep this reference to find your booking.) Tj ET\n`;
@@ -555,7 +566,7 @@ function openModal(b, opts = {}) {
     <dl><div><dt>Hotel</dt><dd>${esc(b.hotel_name)}, ${esc(b.city)}</dd></div><div><dt>Room</dt><dd>${esc(b.room_name)}</dd></div>
     <div><dt>Check-in</dt><dd>${fmt(b.check_in)}</dd></div><div><dt>Check-out</dt><dd>${fmt(b.check_out)}</dd></div>
     <div><dt>Nights</dt><dd>${n}</dd></div><div><dt>Guests</dt><dd>${esc(guestLine(b.guest_count - (b.children || 0), b.children || 0))}</dd></div><div><dt>Rooms</dt><dd>${b.rooms || 1}</dd></div>${b.pets ? '<div><dt>Pets</dt><dd>Traveling with pets</dd></div>' : ''}<div><dt>Booked by</dt><dd>${esc(b.email)}</dd></div>
-    <div class="total"><dt>Total, pay at property</dt><dd>${money(b.total_price)}</dd></div></dl>
+    <div class="total"><dt>Total, pay at property</dt><dd>${money(b.total_price, cityCountry(b.city))}</dd></div></dl>
     <div class="actions"><button type="button" class="btn" id="mpr">Download</button><button type="button" class="btn ghost" id="mgo">Find another stay</button></div></div>`, {home:opts.home});
   const x = wrap.querySelector('.modal-close');
   x.onclick = () => closeModal(true);
@@ -737,7 +748,7 @@ function openAuth(view) {
       const box = body.querySelector('#bks');
       myBookings().then(rows => {
         list = rows;
-        box.innerHTML = rows.length ? `<ul class="bk-list">${rows.map((b, i) => `<li><button type="button" class="bk" data-i="${i}"><strong>${esc(b.hotel_name)}</strong><span>${fmtS(b.check_in)} to ${fmtS(b.check_out)}, ${esc(plural(b.rooms || 1, 'room', 'rooms'))}</span><span class="muted">${esc(b.reference)}, ${money(b.total_price)}</span><span class="badge">${esc(b.status)}</span></button></li>`).join('')}</ul>` : '<p class="muted">No bookings yet. Your next booking will show up here.</p>';
+        box.innerHTML = rows.length ? `<ul class="bk-list">${rows.map((b, i) => `<li><button type="button" class="bk" data-i="${i}"><strong>${esc(b.hotel_name)}</strong><span>${fmtS(b.check_in)} to ${fmtS(b.check_out)}, ${esc(plural(b.rooms || 1, 'room', 'rooms'))}</span><span class="muted">${esc(b.reference)}, ${money(b.total_price, cityCountry(b.city))}</span><span class="badge">${esc(b.status)}</span></button></li>`).join('')}</ul>` : '<p class="muted">No bookings yet. Your next booking will show up here.</p>';
       }).catch(() => { box.innerHTML = '<p class="muted">Your bookings can’t be loaded right now.</p>'; });
       return;
     }
